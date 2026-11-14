@@ -1,17 +1,10 @@
 # 08 — Melhorias propostas e métricas de avaliação adicionais
-
-Documento orientativo (não implementado). Resulta da validação do artefato em 14/11/2026: suíte `pytest` (106 aprovados, 5 ignorados por falta da base real do ClinVar), execução ponta a ponta dos cenários 3 e 4 e `avaliar` nos 5 cenários com `--so-tabela-curada`. Cada item indica o objetivo do TCC atendido, os módulos afetados, o que fazer, o critério de aceite e a prioridade.
-
-Convenção: **P1** = fecha lacuna frente aos objetivos; **P2** = fortalece a avaliação; **P3** = qualidade de engenharia e extensões.
-
----
+ 
 
 ## 1. Melhorias no código
 
 ### M1 — Interface interativa de apoio à decisão (P1)
 
-- **Lacuna:** o artefato só gera figuras PNG estáticas e relatórios Markdown via CLI. O objetivo específico "projetar uma interface de visualização de curvas de risco acumulado" e o objetivo geral ("suporte à decisão") ficam atendidos só em parte. O README lista a interface clínica interativa como trabalho futuro.
-- **Módulos:** novo `src/ela_preditivo/app.py` (ou `interface/`), reutilizando `pipeline.py` e `sobrevivencia.py`; extra opcional `ui` em `pyproject.toml`.
 - **O que fazer:**
   1. Streamlit (ou Dash) com upload dos dois VCFs, sexo, idade atual e laudo de repetições do C9orf72.
   2. Exibir P(portador), risco vitalício com IC 95 %, F(t) com banda, risco em 10 e 20 anos e a tabela de qualidade da ingestão.
@@ -21,15 +14,11 @@ Convenção: **P1** = fecha lacuna frente aos objetivos; **P2** = fortalece a av
 
 ### M2 — Cenário 4 no fluxo oficial (P1)
 
-- **Lacuna:** em `resultados/avaliacao/relatorio.md` o cenário 4 (SOD1 p.D91A, recessivo) foi pulado porque a base ClinVar consolidada não tem o lócus. Sem ele, o caminho recessivo não aparece nos resultados oficiais. Rodando com `--so-tabela-curada` ele funciona (P(portador) = 0,25; risco vitalício = 0,135).
-- **Módulos:** `anotacao.py`, `avaliacao.py`, `cli.py`.
 - **O que fazer:** quando um lócus esperado não existe na base real, usar a tabela curada como fallback e registrar a fonte em `fonte_anotacao`; no relatório, listar explicitamente os cenários pulados e o motivo.
 - **Aceite:** `ela-preditivo tudo` produz os 5 cenários nos resultados; teste cobrindo o fallback.
 
 ### M3 — Modelo de Cox como comparação (P1)
 
-- **Lacuna:** o objetivo menciona "Bayesiano ou Cox"; há só Rede Bayesiana, Weibull e cura mista.
-- **Módulos:** `sobrevivencia.py`, `avaliacao.py`.
 - **O que fazer:** ajustar `CoxPHFitter` (Lifelines) na coorte sintética com gene e sexo como covariáveis e comparar com a cura mista (F(t), C-index, AIC onde aplicável). Registrar em `04_decisoes.md` que a cura mista continua sendo o modelo principal, pois o Cox não representa a fração que nunca manifesta.
 - **Aceite:** tabela comparativa nos resultados; teste de recuperação do razão de risco entre sexos no C9orf72 (δ = ±1 ano).
 
@@ -39,16 +28,6 @@ Convenção: **P1** = fecha lacuna frente aos objetivos; **P2** = fortalece a av
 - **Proposta:** modelar limiar de repetições e probabilidade de expansão ou contração na transmissão, com parâmetros no YAML e citação. Só implementar com evidência publicada; registrar como decisão em `04_decisoes.md`.
 - **Módulos:** `genotipo.py`, `monte_carlo.py`, `config/parametros_literatura.yaml`.
 
-### M5 — Testes e CI (P2)
-
-- Criar GitHub Actions: `pytest` em Python 3.11 e 3.12, mais `black --check` (já configurado em `pyproject.toml`) e um linter (ex. `ruff`).
-- Incluir uma base ClinVar mínima como fixture (poucas linhas por gene) para que os 5 testes de `tests/test_dados_reais.py` deixem de ser ignorados.
-- **Aceite:** CI verde; nenhum teste ignorado por falta de dados.
-
-### M6 — Reprodutibilidade (P3)
-
-- Fixar dependências (arquivo de lock) e adicionar `Dockerfile` (hoje listado como trabalho futuro no README).
-- Gravar versões de pymc, numpy e lifelines em `metadados.json` de cada execução, se ainda não constarem.
 
 ### M7 — Fatores adicionais e limites do modelo (P3)
 
@@ -91,13 +70,3 @@ Convenção: **P1** = fecha lacuna frente aos objetivos; **P2** = fortalece a av
 - Testes em `tests/` com sementes fixas e tolerâncias explícitas.
 
 ---
-
-## 3. Ordem sugerida
-
-1. M2 (rápido, fecha a lacuna do cenário 4).
-2. A1, A2, A3 e A5 (avaliação mais robusta para a seção 5).
-3. M1 (interface) e M3 (Cox).
-4. M5 e M6 (engenharia).
-5. M4, M7 e A4 a A10 conforme tempo e evidência disponível.
-
-Toda alteração de modelo ou parâmetro deve ser registrada em `04_decisoes.md` (nova linha D30 em diante), com a justificativa e a fonte.
